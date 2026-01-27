@@ -1,0 +1,22 @@
+type:build:
+  - ".github/**/*"
+  - ".coveralls.yml"
+  - ".gitignore"
+  - "phpcs.xml"
+dependencies:
+  - "composer.json"
+  - "composer.lock"
+type:major:
+  - "composer.json"
+type:compilers:
+  - "src/Compilers/**/*"
+type:traits:
+  - "src/Traits/**/*"
+type:tests:
+  - 'tests/**/*'
+  - 'phpunit.xml.dist'
+theme:docs:
+  - "README.md"
+  - "LICENSE"
+  - "CONTRIBUTING.md"
+  - "CODE_OF_CONDUCT.md"

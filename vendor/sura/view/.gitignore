@@ -1,0 +1,8 @@
+/vendor
+/tests/resources/compiled
+/.idea
+.env
+.phpunit.result.cache
+.php-cs-fixer.cache
+composer.lock
+composer.phar

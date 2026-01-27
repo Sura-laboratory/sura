@@ -1,0 +1,18 @@
+addReviewers: true
+
+numberOfReviewers: 1
+
+reviewers:
+  - phakof
+
+addAssignees: true
+
+assignees:
+  - semyon492
+  - phakof
+
+numberOfAssignees: 1
+
+skipKeywords:
+  - wip
+  - draft

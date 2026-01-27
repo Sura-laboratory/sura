@@ -1,0 +1,57 @@
+template: |
+  ## Changes
+  $CHANGES
+change-template: '- **$TITLE** (#$NUMBER)'
+
+version-template: "$MAJOR.$MINOR.$PATCH"
+name-template: '$RESOLVED_VERSION'
+tag-template: '$RESOLVED_VERSION'
+
+categories:
+  - title: '🚀  Features'
+    labels:
+      - 'feature'
+      - 'type:interfaces'
+      - 'type:major'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'fix'
+      - 'bugfix'
+      - 'bug'
+      - 'hotfix'
+      - 'dependencies'
+  - title: '🧰 Maintenance'
+    labels:
+      - 'type:build'
+      - 'refactoring'
+      - 'theme:docs'
+      - 'type:tests'
+      - 'analysis'
+
+change-title-escapes: '\<*_&'
+
+version-resolver:
+  major:
+    labels:
+      - major
+      - refactoring
+      - 'type:major'
+  minor:
+    labels:
+      - feature
+      - minor
+      - 'type:helper'
+      - dependencies
+  patch:
+    labels:
+      - type:build
+      - bug
+      - bugfix
+      - hotfix
+      - fix
+      - theme:docs
+      - type:compilers
+      - type:traits
+      - type:tests
+      - analysis
+  default: patch
