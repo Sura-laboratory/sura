@@ -5,7 +5,7 @@ on:
     types: [closed]
     branches: [main]
   push:
-    branches: [main]
+    branches: [master]
 
 permissions:
   contents: write    # нужно для создания тега и релиза
@@ -211,13 +211,69 @@ jobs:
             });
             core.info(`Created git ref refs/tags/${tagName}`);
 
+            // Собираем кастомное описание из описаний PR
+            let releaseBody = `Automated ${finalBump} release created by workflow. Bumped from ${latest || '<none>'} to ${nextVersion}.\n\n`;
+            releaseBody += `## Changes\n`;
+
+            if (eventName === 'pull_request') {
+              const pr = context.payload.pull_request;
+              if (pr.body && pr.body.trim()) {
+                releaseBody += `\n### PR #${pr.number}: ${pr.title}\n\n${pr.body.trim()}\n`;
+              } else {
+                releaseBody += `\n- ${pr.title} (PR #${pr.number})\n`;
+              }
+            } else if (eventName === 'push') {
+              const commits = context.payload.commits || [];
+              if (commits.length > 0) {
+                for (const commit of commits) {
+                  // Пытаемся найти связанный PR по сообщению коммита
+                  const prMatch = commit.message.match(/\(#(\d+)\)$/);
+                  if (prMatch) {
+                    const prNumber = prMatch[1];
+                    try {
+                      const prResp = await github.rest.pulls.get({ owner, repo, pull_number: prNumber });
+                      const pr = prResp.data;
+                      if (pr.merged) {
+                        releaseBody += `\n### PR #${pr.number}: ${pr.title}\n\n`;
+                        if (pr.body && pr.body.trim()) {
+                          // Ограничиваем длину и убираем лишние символы (например, @mentions)
+                          const cleanBody = pr.body
+                            .trim()
+                            .split('\n')
+                            .map(line => line.startsWith('@') ? `<details><summary>Mention</summary>${line}</summary>` : line)
+                            .join('\n');
+                          releaseBody += `${cleanBody}\n`;
+                        } else {
+                          releaseBody += `_No description._\n`;
+                        }
+                      }
+                    } catch (e) {
+                      core.warning(`Could not fetch PR #${prNumber}: ${e.message}`);
+                      releaseBody += `\n- ${commit.message.split('\n')[0]} (PR #${prNumber}, description unavailable)\n`;
+                    }
+                  } else {
+                    releaseBody += `\n- ${commit.message.split('\n')[0]}\n`;
+                  }
+                }
+              } else {
+                releaseBody += "_No commits found._\n";
+              }
+            }
+
+            // Добавляем ссылку на сравнение версий
+            if (latest) {
+              releaseBody += `\n\n---\n[Compare with ${latest}](https://github.com/${owner}/${repo}/compare/${latest}...${tagName})`;
+            } else {
+              releaseBody += `\n\nFirst release.`;
+            }
+
             // Create GitHub Release
             const releaseResp = await github.rest.repos.createRelease({
               owner,
               repo,
               tag_name: tagName,
               name: `${tagName} (${finalBump} release)`,
-              body: `Automated ${finalBump} release created by workflow. Bumped from ${latest || '<none>'} to ${nextVersion}.`,
+              body: releaseBody,
               draft: false,
               prerelease: false
             });
