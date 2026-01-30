@@ -1,0 +1,18 @@
+name: Label PRs
+on:
+  pull_request_review:
+    types:
+      - submitted
+      - edited
+      - dismissed
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Label approved PRs
+        uses: koj-co/label-approved-action@master
+        with:
+          labels: "approved"
+          approvals: 1
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

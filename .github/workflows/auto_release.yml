@@ -1,0 +1,250 @@
+# GitHub Actions workflow для автоматического релиза по меткам PR (semver)
+# Триггер: merge PR в main или push в main
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: write    # нужно для создания тега и релиза
+  pull-requests: read
+
+jobs:
+  release:
+    name: Create semantic release
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true)
+      ||
+      (github.event_name == 'push')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # нужно чтобы получить теги/историю
+
+      - name: Determine labels and bump type, create tag & release
+        uses: actions/github-script@v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const eventName = context.eventName;
+
+            core.info(`Event: ${eventName}`);
+
+            // Map labels to bump priority
+            const bumpPriority = { 'major': 3, 'minor': 2, 'patch': 1 };
+            const labelToBump = {
+              'release:major': 'major',
+              'release:minor': 'minor',
+              'release:patch': 'patch',
+              // Доп. возможные варианты
+              'semver:major': 'major',
+              'semver:minor': 'minor',
+              'semver:patch': 'patch',
+              'major': 'major',
+              'minor': 'minor',
+              'patch': 'patch',
+              'release:skip': 'skip',
+              'skip-release': 'skip'
+            };
+
+            // Helper: pick highest bump among array of bump types
+            function pickHighestBump(bumps) {
+              if (!bumps || bumps.length === 0) return null;
+              if (bumps.includes('skip')) return 'skip';
+              let best = null;
+              for (const b of bumps) {
+                if (!best) { best = b; continue; }
+                if (bumpPriority[b] && bumpPriority[best]) {
+                  if (bumpPriority[b] > bumpPriority[best]) best = b;
+                }
+              }
+              return best;
+            }
+
+            // Collect labels from event
+            let collectedLabelNames = [];
+
+            if (eventName === 'pull_request') {
+              const pr = context.payload.pull_request;
+              if (!pr || !pr.merged) {
+                core.info('Not a merged PR — skipping.');
+                return;
+              }
+              const prLabels = (pr.labels || []).map(l => l.name);
+              collectedLabelNames = prLabels;
+              core.info(`Labels from PR #${pr.number}: ${JSON.stringify(prLabels)}`);
+              // Use merge commit sha for tagging
+              var targetSha = pr.merge_commit_sha || pr.head.sha;
+            } else if (eventName === 'push') {
+              // For push, inspect commits and find associated PRs to get labels
+              const commits = context.payload.commits || [];
+              core.info(`Push contains ${commits.length} commits.`);
+              const prLabelSet = new Set();
+              for (const commit of commits) {
+                const commitSha = commit.id;
+                try {
+                  // List PRs associated with this commit (requires preview header but actions/github-script handles)
+                  const resp = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                    owner, repo, commit_sha: commitSha
+                  });
+                  if (resp && resp.data) {
+                    for (const pr of resp.data) {
+                      // Only consider merged PRs into main
+                      if (pr.merged_at) {
+                        // fetch full PR to get labels (listPullRequestsAssociatedWithCommit returns limited info)
+                        const full = await github.rest.pulls.get({ owner, repo, pull_number: pr.number });
+                        const labels = (full.data.labels || []).map(l => l.name);
+                        labels.forEach(l => prLabelSet.add(l));
+                        core.info(`Commit ${commitSha} associated with merged PR #${pr.number} labels: ${JSON.stringify(labels)}`);
+                        // use the merge_commit_sha as potential target for tag
+                        if (!targetSha && full.data.merge_commit_sha) targetSha = full.data.merge_commit_sha;
+                      }
+                    }
+                  }
+                } catch (e) {
+                  core.warning(`Error listing PRs for commit ${commitSha}: ${e}`);
+                }
+              }
+              collectedLabelNames = Array.from(prLabelSet);
+              core.info(`Collected labels from push-associated PRs: ${JSON.stringify(collectedLabelNames)}`);
+              // fallback to head sha of the push if no merge commit found
+              if (!targetSha) targetSha = context.sha;
+            } else {
+              core.info('Unsupported event — exiting.');
+              return;
+            }
+
+            // Map labels -> bumps
+            const bumps = [];
+            for (const name of collectedLabelNames) {
+              const normalized = name.trim().toLowerCase();
+              if (labelToBump[normalized]) bumps.push(labelToBump[normalized]);
+            }
+            const finalBump = pickHighestBump(bumps);
+
+            if (!finalBump) {
+              core.info('No release labels found on merged PR(s). Nothing to do.');
+              return;
+            }
+            if (finalBump === 'skip') {
+              core.info('Release skipped due to skip label.');
+              return;
+            }
+            core.info(`Final bump type: ${finalBump}`);
+
+            // Find latest semver tag
+            async function getLatestSemverTag() {
+              const tags = [];
+              let page = 1;
+              while (true) {
+                const res = await github.rest.repos.listTags({ owner, repo, per_page: 100, page });
+                if (!res || !res.data || res.data.length === 0) break;
+                tags.push(...res.data.map(t => t.name));
+                if (res.data.length < 100) break;
+                page++;
+              }
+              // filter semver tags like v1.2.3 or 1.2.3
+              const semverRe = /^v?(\d+)\.(\d+)\.(\d+)$/;
+              let best = null;
+              for (const t of tags) {
+                const m = t.match(semverRe);
+                if (!m) continue;
+                const ver = { major: parseInt(m[1]), minor: parseInt(m[2]), patch: parseInt(m[3]), raw: t };
+                if (!best) { best = ver; continue; }
+                if (ver.major > best.major) best = ver;
+                else if (ver.major === best.major && ver.minor > best.minor) best = ver;
+                else if (ver.major === best.major && ver.minor === best.minor && ver.patch > best.patch) best = ver;
+              }
+              return best ? `${best.major}.${best.minor}.${best.patch}` : null;
+            }
+
+            const latest = await getLatestSemverTag();
+            core.info(`Latest semver tag: ${latest || '<none>'}`);
+
+            function bumpVersion(version, bump) {
+              if (!version) {
+                if (bump === 'major') return '1.0.0';
+                if (bump === 'minor') return '0.1.0';
+                return '0.0.1';
+              }
+              const parts = version.split('.').map(x => parseInt(x));
+              let [maj, min, pat] = parts;
+              if (bump === 'major') {
+                maj = maj + 1; min = 0; pat = 0;
+              } else if (bump === 'minor') {
+                min = min + 1; pat = 0;
+              } else { // patch
+                pat = pat + 1;
+              }
+              return `${maj}.${min}.${pat}`;
+            }
+
+            const nextVersion = bumpVersion(latest, finalBump);
+            const tagName = `${nextVersion}`;
+            core.info(`Will create tag ${tagName} (target sha ${targetSha})`);
+
+            // Check if tag already exists
+            try {
+              await github.rest.git.getRef({ owner, repo, ref: `tags/${tagName}` });
+              core.setFailed(`Tag ${tagName} already exists — aborting.`);
+              return;
+            } catch (e) {
+              // if 404 -> ok; else rethrow
+              if (e.status && e.status !== 404) {
+                throw e;
+              }
+            }
+
+            // Create tag ref (lightweight tag pointing to merge commit or head)
+            await github.rest.git.createRef({
+              owner,
+              repo,
+              ref: `refs/tags/${tagName}`,
+              sha: targetSha
+            });
+            core.info(`Created git ref refs/tags/${tagName}`);
+
+            // Create GitHub Release
+            const releaseResp = await github.rest.repos.createRelease({
+              owner,
+              repo,
+              tag_name: tagName,
+              name: `${tagName} (${finalBump} release)`,
+              body: `Automated ${finalBump} release created by workflow. Bumped from ${latest || '<none>'} to ${nextVersion}.`,
+              draft: false,
+              prerelease: false
+            });
+            core.info(`Created release: ${releaseResp.data.html_url}`);
+
+            // Optionally: update composer.json version (uncomment if wanted)
+            // Note: Many PHP packages do not keep version in composer.json; composer reads tag.
+            /*
+            try {
+              const path = 'composer.json';
+              const getResp = await github.rest.repos.getContent({ owner, repo, path });
+              const content = Buffer.from(getResp.data.content, getResp.data.encoding).toString();
+              const json = JSON.parse(content);
+              json.version = nextVersion;
+              const newContent = Buffer.from(JSON.stringify(json, null, 2)).toString('base64');
+              await github.rest.repos.createOrUpdateFileContents({
+                owner, repo, path,
+                message: `chore(release): set composer.json version to ${nextVersion}`,
+                content: newContent,
+                sha: getResp.data.sha,
+                branch: 'main'
+              });
+              core.info('composer.json updated with new version.');
+            } catch (e) {
+              core.info('composer.json update skipped or failed: ' + e.message);
+            }
+            */
+
+            core.setOutput('tag', tagName);
+            core.setOutput('release_url', releaseResp.data.html_url);

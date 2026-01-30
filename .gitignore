@@ -1,0 +1,12 @@
+*.log
+.DS_Store
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+/.idea
+/.phpunit.cache
+/.vscode
+/auth.json
+/vendor
+Thumbs.db
