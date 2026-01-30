@@ -1,0 +1,17 @@
+addReviewers: true
+
+numberOfReviewers: 1
+
+reviewers:
+  - t0nipit
+
+addAssignees: true
+
+assignees:
+  - t0nipit
+
+numberOfAssignees: 1
+
+skipKeywords:
+  - wip
+  - draft
