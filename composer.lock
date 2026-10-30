@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "52e9293905efa015bc56fc8eb908a1bb",
+    "content-hash": "0e7afae04c33c8133842f6b182ed59ee",
     "packages": [
         {
             "name": "intervention/gif",
@@ -359,28 +359,32 @@
         },
         {
             "name": "sura/view",
-            "version": "2.1.1",
+            "version": "3.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Sura-laboratory/sura-view.git",
-                "reference": "f19be9a3ae5319f3c875f2d65de4727b85f8ac80"
+                "reference": "11d795b3993a3f984276e4c65fd3dc48db6ab344"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Sura-laboratory/sura-view/zipball/f19be9a3ae5319f3c875f2d65de4727b85f8ac80",
-                "reference": "f19be9a3ae5319f3c875f2d65de4727b85f8ac80",
+                "url": "https://api.github.com/repos/Sura-laboratory/sura-view/zipball/11d795b3993a3f984276e4c65fd3dc48db6ab344",
+                "reference": "11d795b3993a3f984276e4c65fd3dc48db6ab344",
                 "shasum": ""
             },
             "require": {
                 "ext-iconv": "*",
                 "ext-json": "*",
-                "php": "^8.5"
+                "ext-libxml": "*",
+                "php": "^8.4 || ^8.5"
             },
             "require-dev": {
-                "phpunit/phpunit": "^9.5 || ^10.0"
+                "phpunit/phpunit": "^9.5 || ^10.0 || ^12.0"
             },
             "type": "library",
             "autoload": {
+                "files": [
+                    "src/functions.php"
+                ],
                 "psr-4": {
                     "Tests\\": "tests/",
                     "Sura\\View\\": "src/"
@@ -400,9 +404,9 @@
             ],
             "support": {
                 "issues": "https://github.com/Sura-laboratory/sura-view/issues",
-                "source": "https://github.com/Sura-laboratory/sura-view/tree/2.1.1"
+                "source": "https://github.com/Sura-laboratory/sura-view/tree/3.1.0"
             },
-            "time": "2026-01-27T15:29:30+00:00"
+            "time": "2026-02-06T02:14:48+00:00"
         }
     ],
     "packages-dev": [
