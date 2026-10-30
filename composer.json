@@ -14,7 +14,7 @@
     "sura/view": "^2.1",
     "sura/database": "^1.0",
     "james-heinrich/getid3": "^2.0-dev",
-    "intervention/image": "3.1.*@beta"
+    "intervention/image": "4.4.*@beta"
   },
   "require-dev": {
     "fakerphp/faker": "^1.23"
