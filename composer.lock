@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "52e9293905efa015bc56fc8eb908a1bb",
+    "content-hash": "05de2093c7841870c2d3018af0f86917",
     "packages": [
         {
             "name": "intervention/gif",
@@ -304,24 +304,25 @@
         },
         {
             "name": "sura/framework",
-            "version": "1.0.0",
+            "version": "2.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Sura-laboratory/sura-framework.git",
-                "reference": "7bd64560f793fee8c6c83103c47569d3c5940693"
+                "reference": "71cf071ece4714a97748a31fd5f8cc4611adfd9b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Sura-laboratory/sura-framework/zipball/7bd64560f793fee8c6c83103c47569d3c5940693",
-                "reference": "7bd64560f793fee8c6c83103c47569d3c5940693",
+                "url": "https://api.github.com/repos/Sura-laboratory/sura-framework/zipball/71cf071ece4714a97748a31fd5f8cc4611adfd9b",
+                "reference": "71cf071ece4714a97748a31fd5f8cc4611adfd9b",
                 "shasum": ""
             },
             "require": {
                 "ext-iconv": "*",
                 "ext-zlib": "*",
-                "php": "^8.5"
+                "php": "^8.4 || ^8.5"
             },
             "require-dev": {
+                "ext-xdebug": "*",
                 "jetbrains/phpstorm-attributes": "1.0",
                 "php-coveralls/php-coveralls": "^2.1",
                 "phpstan/phpstan": "^1.5",
@@ -347,15 +348,15 @@
                     "email": "semyon492@ya.ru"
                 }
             ],
-            "description": "System parts",
+            "description": "System parts, framework",
             "keywords": [
                 "support"
             ],
             "support": {
                 "issues": "https://github.com/Sura-laboratory/sura-framework/issues",
-                "source": "https://github.com/Sura-laboratory/sura-framework/tree/1.0.0"
+                "source": "https://github.com/Sura-laboratory/sura-framework/tree/2.0.2"
             },
-            "time": "2026-01-27T16:06:52+00:00"
+            "time": "2026-03-10T09:36:26+00:00"
         },
         {
             "name": "sura/view",
